@@ -22,44 +22,69 @@
     }
   }
 
-  /* ── Elements ── */
-  const heart         = document.getElementById('heart');
-  const note          = document.getElementById('note');
-  const shareBtn      = document.getElementById('shareBtn');
-  const anniversaryEl = document.getElementById('anniversary');
-  const countdownEl   = document.getElementById('countdown');
+  /* ── Stage elements ── */
+  const s0       = document.getElementById('s0');
+  const s1       = document.getElementById('s1');
+  const heartBtn = document.getElementById('heartBtn');
+  let messagesShown = false;
 
-  /* ── Rotating messages ── */
-  let msgIndex = 0;
-
-  function showMessage(text) {
-    note.classList.add('changing');
-    setTimeout(() => {
-      note.textContent = text;
-      note.classList.remove('changing');
-    }, 220);
+  /* ── Stage transition ── */
+  function goTo(from, to) {
+    from.classList.add('stage--out');
+    setTimeout(() => from.classList.add('stage--gone'), 650);
+    to.classList.remove('stage--gone');
+    requestAnimationFrame(() => requestAnimationFrame(() => to.classList.remove('stage--out')));
   }
 
-  /* ── Heart click → show/cycle messages + sparkles ── */
-  function handleHeartClick() {
-    if (!note.classList.contains('show')) {
-      note.textContent = LOVE_MESSAGES[0];
-      msgIndex = 0;
-      note.classList.add('show');
-    } else {
-      msgIndex = (msgIndex + 1) % LOVE_MESSAGES.length;
-      showMessage(LOVE_MESSAGES[msgIndex]);
-    }
+  s0.addEventListener('click', () => goTo(s0, s1));
+
+  heartBtn.addEventListener('click', e => {
+    e.stopPropagation();
     if (!reducedMotion) spawnSparkles(12);
-  }
-  heart.addEventListener('click', handleHeartClick);
-  heart.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleHeartClick(); }
+    if (messagesShown) return;
+    messagesShown = true;
+    s1.classList.add('stage--messages');
+    revealMessages();
   });
+  heartBtn.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); heartBtn.click(); }
+  });
+
+  /* ── Message reveal ── */
+  const MSG_DELAYS = [0, 1500, 3200, 5200, 7400, 9600];
+
+  function revealMessages() {
+    const wrap = document.getElementById('messagesWrap');
+    if (!wrap || wrap.childElementCount > 0) return;
+    wrap.classList.remove('messages-wrap--collapsed');
+
+    LOVE_MESSAGES.forEach((text, i) => {
+      const p = document.createElement('p');
+      p.className = 'msg' + (i === LOVE_MESSAGES.length - 1 ? ' msg--sig' : '');
+      p.textContent = text;
+      wrap.appendChild(p);
+      setTimeout(() => p.classList.add('show'), (MSG_DELAYS[i] ?? i * 900) + 300);
+    });
+
+    const annDelay = (MSG_DELAYS[LOVE_MESSAGES.length] ?? LOVE_MESSAGES.length * 900) + 300;
+
+    const box  = document.createElement('div');  box.className = 'ann-box';
+    const main = document.createElement('p');    main.id = 'annMain'; main.className = 'ann-main';
+    const cd   = document.createElement('p');    cd.id   = 'annCd';   cd.className   = 'ann-cd';
+    box.appendChild(main);
+    box.appendChild(cd);
+    wrap.appendChild(box);
+
+    setTimeout(() => {
+      box.classList.add('show');
+      updateAnniversary();
+      setInterval(updateAnniversary, 1000);
+    }, annDelay);
+  }
 
   /* ── Sparkles ── */
   function spawnSparkles(n) {
-    const r  = heart.getBoundingClientRect();
+    const r  = heartBtn.getBoundingClientRect();
     const cx = r.left + r.width  / 2;
     const cy = r.top  + r.height / 2;
     for (let i = 0; i < n; i++) {
@@ -82,22 +107,8 @@
     }
   }
 
-  /* ── Share ── */
-  shareBtn.addEventListener('click', async () => {
-    const url  = location.href;
-    const text = 'Evičko, miluji tě ❤️';
-    if (navigator.share) {
-      try { await navigator.share({ title: text, text, url }); return; } catch {}
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      shareBtn.classList.add('copied');
-      setTimeout(() => shareBtn.classList.remove('copied'), 1400);
-    } catch {}
-  });
-
   /* ── Anniversary & countdown ── */
-  const startDate = new Date(2025, 2, 21); // 21. 3. 2025
+  const startDate = new Date(2025, 2, 21);
 
   function monthLabel(n) {
     if (n === 1) return 'měsíc';
@@ -108,15 +119,18 @@
   function pad(n) { return String(n).padStart(2, '0'); }
 
   function updateAnniversary() {
-    const now = new Date();
+    const annMain = document.getElementById('annMain');
+    const annCd   = document.getElementById('annCd');
+    if (!annMain || !annCd) return;
 
+    const now = new Date();
     let months =
       (now.getFullYear() - startDate.getFullYear()) * 12 +
       (now.getMonth()    - startDate.getMonth());
     if (now.getDate() < startDate.getDate()) months--;
     if (months < 0) months = 0;
 
-    anniversaryEl.textContent = `Jsme spolu ${months} ${monthLabel(months)} ♡`;
+    annMain.textContent = `Náš čas spolu: ${months} ${monthLabel(months)} ♡`;
 
     const next = new Date(startDate);
     next.setMonth(startDate.getMonth() + months + 1);
@@ -126,10 +140,6 @@
     const h = Math.floor(diff / 3600000) % 24;
     const m = Math.floor(diff / 60000)   % 60;
     const s = Math.floor(diff / 1000)    % 60;
-    countdownEl.textContent =
-      `do dalšího výročí ${d}d ${pad(h)}h ${pad(m)}m ${pad(s)}s`;
+    annCd.textContent = `do dalšího společného měsíce ${d}d ${pad(h)}h ${pad(m)}m ${pad(s)}s`;
   }
-
-  updateAnniversary();
-  setInterval(updateAnniversary, 1000);
 })();

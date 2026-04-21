@@ -14,45 +14,31 @@
 
   <div class="bg" id="bg"></div>
 
-  <header class="toolbar">
-    <button class="share-btn" id="shareBtn" aria-label="Sdílet" type="button">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-      </svg>
-    </button>
-  </header>
+  <!-- Stage 0: Photo -->
+  <div class="stage" id="s0">
+    <img class="cover-photo" src="noc_pod_maskou.jpg" alt="" draggable="false" />
+    <div class="photo-overlay"></div>
+    <span class="tap-hint">Klepni kdekoli ♡</span>
+  </div>
 
-  <main class="main">
-    <div class="photo-wrap">
-      <img class="photo" src="noc_pod_maskou.jpg" alt="My love" draggable="false" />
+  <!-- Stage 1: Title + heart -->
+  <div class="stage stage--out stage--gone" id="s1">
+    <div class="title-wrap">
+      <p class="greeting">Evičko,</p>
+      <h1 class="title">miluji&nbsp;tě</h1>
     </div>
-
-    <p class="greeting">Evičko,</p>
-    <h1 class="title">miluji&nbsp;tě</h1>
-
-    <div class="heart-wrap">
-      <div class="heart-glow"></div>
-      <svg class="heart-svg" id="heart" viewBox="0 0 24 24"
-           role="button" tabindex="0" aria-label="Klikni na srdce">
-        <path d="M12 21s-6.716-4.388-9.428-7.1C.78 12.108.5 9.156 2.343 7.314a4.95 4.95 0 0 1 7 0L12 9.971l2.657-2.657a4.95 4.95 0 1 1 7 7C18.716 16.612 12 21 12 21z" fill="currentColor"/>
-      </svg>
+    <div class="heart-bottom-wrap">
+      <div class="heart-wrap">
+        <div class="heart-glow"></div>
+        <svg class="heart-svg" id="heartBtn" viewBox="0 0 24 24"
+             role="button" tabindex="0" aria-label="Klikni na srdce">
+          <path d="M12 21s-6.716-4.388-9.428-7.1C.78 12.108.5 9.156 2.343 7.314a4.95 4.95 0 0 1 7 0L12 9.971l2.657-2.657a4.95 4.95 0 1 1 7 7C18.716 16.612 12 21 12 21z" fill="currentColor"/>
+        </svg>
+      </div>
+      <p class="heart-hint">klepni na srdce</p>
     </div>
-
-    <p class="note" id="note"></p>
-
-    <div class="divider">
-      <div class="divider-line"></div>
-      <span class="divider-dot">♥</span>
-      <div class="divider-line"></div>
-    </div>
-  </main>
-
-  <footer class="stats">
-    <p class="anniversary" id="anniversary"></p>
-    <p class="countdown"   id="countdown"></p>
-  </footer>
+    <div class="messages-wrap messages-wrap--collapsed" id="messagesWrap"></div>
+  </div>
 
   <script src="messages.js"></script>
   <script src="app.js"></script>
