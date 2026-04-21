@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="manifest" href="manifest.json">
+  <title>Miluji tě</title>
+  <style>
+    :root{
+      --bg1:#ffdde9; --bg2:#ffc2d6; --panel:#ffe6f0; --text:#4d0019; --muted:#8a4a61; --accent:#ff2e6e;
+      --ring: rgba(255,46,110,.35);
+    }
+    [data-theme="dark"]{
+      --bg1:#0f101a; --bg2:#1a1b2a; --panel:#15172a; --text:#f7eaf0; --muted:#c9a6b4; --accent:#ff6f9a; --ring: rgba(255,111,154,.35);
+    }
+    *{ box-sizing:border-box }
+    html,body{ height:100%; margin:0 }
+    body{
+      min-height:100dvh;
+      display:grid; place-items:center;
+      font:16px/1.4 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Arial;
+      color:var(--text);
+      background:
+        radial-gradient(900px 500px at 80% -20%, #ff9fc2 0%, rgba(0,0,0,0) 60%),
+        radial-gradient(700px 400px at -10% 120%, #ffb3cc 0%, rgba(0,0,0,0) 60%),
+        linear-gradient(135deg, var(--bg1), var(--bg2));
+      transition: background .4s ease, color .2s ease;
+    }
+    .card{
+      text-align:center;
+      padding:clamp(16px,4vw,40px);
+      background:color-mix(in oklab, var(--panel) 90%, white 0%);
+      border:2px solid var(--ring);
+      border-radius:24px;
+      box-shadow:0 10px 40px var(--ring);
+      backdrop-filter:saturate(120%) blur(8px);
+      position:relative;
+      overflow:hidden;
+      max-width:min(92vw,720px);
+    }
+    .toolbar{
+      display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:10px;
+    }
+    button{
+      border:1px solid var(--ring); background:transparent; color:var(--text);
+      padding:8px 12px; border-radius:999px; cursor:pointer; font-weight:600;
+      transition:transform .08s ease, background .2s ease;
+    }
+    button:active{ transform:scale(.98) }
+    button:hover{ background:color-mix(in oklab, var(--panel) 70%, white 0%) }
+
+    h1{
+      margin:10px 0 0 0;
+      font-weight:800;
+      font-size:clamp(32px,7vw,84px);
+      letter-spacing:.3px;
+      line-height:1.1;
+      text-wrap:balance;
+      color:var(--accent);
+    }
+    .sub{ margin-top:6px; font-size:1.05rem; color:var(--muted) }
+
+    .heart{ display:block; width:clamp(64px,9vw,120px); margin:14px auto 0; color:var(--accent); filter:drop-shadow(0 8px 24px rgba(255,46,110,.45)); animation:beat 1.25s ease-in-out infinite; cursor:pointer }
+    @keyframes beat{ 0%,20%,100%{ transform:scale(1) } 40%{ transform:scale(1.12) } 60%{ transform:scale(.95) } }
+    .reduce-motion{ animation:none }
+
+    #note{ margin-top:12px; font-size:1.2rem; color:var(--text); opacity:0; transition:opacity .5s ease }
+    #note.show{ opacity:1 }
+
+    #anniversary, #countdown{ margin-top:14px; font-size:1rem; color:var(--muted) }
+
+    /* floating hearts */
+    .sparkle{ position:absolute; left:50%; top:50%; font-size:20px; pointer-events:none; opacity:0; transform:translate(-50%,-50%) scale(.6); animation:spark 1.2s ease forwards }
+    @keyframes spark{
+      0%{ opacity:.9; transform:translate(-50%,-50%) scale(.6) }
+      60%{ opacity:.9 }
+      100%{ opacity:0; transform:translate(var(--dx), var(--dy)) scale(1.4) }
+    }
+  </style>
+</head>
+<body>
+  <main class="card" role="main">
+    <div class="toolbar" aria-label="Ovládání">
+      <button id="shareBtn" type="button">Sdílet</button>
+      <button id="fullBtn" type="button">Celá obrazovka</button>
+      <button id="themeBtn" type="button">Tmavý/světlý</button>
+    </div>
+
+    <h1 id="who">Evičko, miluji tě</h1>
+    <div class="sub" id="sub">Klikni na srdce</div>
+
+    <svg class="heart" id="heart" viewBox="0 0 24 24" role="button" aria-label="Změnit vzkaz">
+      <path d="M12 21s-6.716-4.388-9.428-7.1C.78 12.108.5 9.156 2.343 7.314a4.95 4.95 0 0 1 7 0L12 9.971l2.657-2.657a4.95 4.95 0 1 1 7 7C18.716 16.612 12 21 12 21z" fill="currentColor"/>
+    </svg>
+    <div id="note">Tvůj Fanda</div>
+    <div id="anniversary"></div>
+    <div id="countdown"></div>
+  </main>
+
+  <script>
+    (function(){
+      const who = document.getElementById('who');
+      const sub = document.getElementById('sub');
+      const note = document.getElementById('note');
+      const heart = document.getElementById('heart');
+      const anniversaryEl = document.getElementById('anniversary');
+      const countdownEl = document.getElementById('countdown');
+
+      const shareBtn = document.getElementById('shareBtn');
+      const fullBtn = document.getElementById('fullBtn');
+      const themeBtn = document.getElementById('themeBtn');
+
+      // Reduced motion
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        heart.classList.add('reduce-motion');
+      }
+
+      // Local storage
+      const LS_KEY = 'loveapp-state-v1';
+      const loadState = () => { try{ return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); }catch{ return {} } };
+      const saveState = (s) => { try{ localStorage.setItem(LS_KEY, JSON.stringify(s)); }catch{} };
+
+      const state = Object.assign({
+        headline: loadState().headline || who.textContent,
+        signature: loadState().signature || note.textContent,
+        theme: loadState().theme || 'light'
+      });
+
+      // apply state
+      who.textContent = state.headline;
+      note.textContent = state.signature;
+      document.body.setAttribute('data-theme', state.theme === 'dark' ? 'dark' : 'light');
+
+      // click to copy headline
+      document.body.addEventListener('click', async (e)=>{
+        if (e.target.closest('button') || e.target === heart) return;
+        try{ await navigator.clipboard.writeText(who.textContent); sub.textContent = 'Zkopírováno'; setTimeout(()=>sub.textContent='Klikni na srdce', 1200); }catch(e){}
+      });
+
+      // heart interaction
+      heart.addEventListener('click', e=>{
+        e.stopPropagation();
+        note.classList.toggle('show');
+        spawnHearts(8);
+      });
+
+      // share
+      shareBtn.addEventListener('click', async ()=>{
+        const title = '❤️ Miluju tě';
+        const text = who.textContent + '\n' + note.textContent;
+        const url = location.origin + location.pathname;
+        if (navigator.share){ try{ await navigator.share({ title, text, url }); return; }catch(e){} }
+        try{ await navigator.clipboard.writeText(url); shareBtn.textContent = 'Odkaz zkopírován'; setTimeout(()=>shareBtn.textContent='Sdílet', 1400); }catch{}
+      });
+
+      // fullscreen
+      fullBtn.addEventListener('click', async ()=>{
+        const el = document.documentElement;
+        if (!document.fullscreenElement){ await el.requestFullscreen?.(); } else { await document.exitFullscreen?.(); }
+      });
+
+      // theme toggle
+      themeBtn.addEventListener('click', ()=>{
+        const cur = document.body.getAttribute('data-theme')==='dark' ? 'dark':'light';
+        const next = cur==='dark' ? 'light' : 'dark';
+        document.body.setAttribute('data-theme', next);
+        saveState({ headline:who.textContent, signature:note.textContent, theme: next });
+      });
+
+      function spawnHearts(n){
+        const box = document.querySelector('.card');
+        for(let i=0;i<n;i++){
+          const s = document.createElement('div');
+          s.className = 'sparkle';
+          s.textContent = '❤';
+          const dx = (Math.random()*200-100)|0;
+          const dy = (Math.random()*-160-40)|0;
+          s.style.setProperty('--dx', dx+'px');
+          s.style.setProperty('--dy', dy+'px');
+          s.style.left = (heart.getBoundingClientRect().left + heart.clientWidth/2 - box.getBoundingClientRect().left) + 'px';
+          s.style.top  = (heart.getBoundingClientRect().top + heart.clientHeight/2 - box.getBoundingClientRect().top) + 'px';
+          box.appendChild(s);
+          setTimeout(()=>s.remove(), 1200);
+        }
+      }
+
+      // Anniversary & countdown
+      const startDate = new Date(2025, 2, 21); // 21.3.2025 (month is 0-indexed)
+      function updateAnniversary(){
+        const now = new Date();
+        let monthsTogether = (now.getFullYear()-startDate.getFullYear())*12 + (now.getMonth()-startDate.getMonth());
+        if (now.getDate() < startDate.getDate()) monthsTogether -= 1;
+        if (monthsTogether < 0) monthsTogether = 0;
+        anniversaryEl.textContent = `Jsme spolu ${monthsTogether} měsíců.`;
+
+        // next monthly anniversary
+        let nextMonth = new Date(startDate);
+        nextMonth.setMonth(startDate.getMonth()+monthsTogether+1);
+        if (nextMonth < now) nextMonth.setMonth(nextMonth.getMonth()+1);
+
+        const diff = nextMonth - now;
+        const days = Math.floor(diff/(1000*60*60*24));
+        const hours = Math.floor((diff/(1000*60*60))%24);
+        const minutes = Math.floor((diff/(1000*60))%60);
+        const seconds = Math.floor((diff/1000)%60);
+        countdownEl.textContent = `Do dalšího výročí zbývá ${days}d ${hours}h ${minutes}m ${seconds}s.`;
+      }
+      updateAnniversary();
+      setInterval(updateAnniversary, 1000);
+    })();
+  </script>
+</body>
+</html>
